@@ -8,6 +8,7 @@ const app = express();
 const port = 3000;
 
 app.use(
+  express.json(),
   cors({
     origin: "*",
   })
@@ -20,26 +21,46 @@ const client = new MongoClient(mongodbUri, {
   serverApi: ServerApiVersion.v1,
 });
 
-app.get("/rooms", (req, res) => {
-  client.connect((err) => {
-    client
+client.connect();
+process.on("exit", client.close);
+
+app.get("/rooms", async (req, res) => {
+  try {
+    const data = await client
       .db("simple-cleaning-app")
       .collection("rooms")
       .find()
-      .toArray()
-      .then((data) => {
-        console.log(data);
-        res.send(data);
-      })
-      .catch((err) => {
-        throw err;
-        // throw new Error("There was a problem connecting to the Rooms database");
-      })
-      .finally(() => {
-        client.close();
-        console.log("client has closed");
-      });
-  });
+      .toArray();
+    res.send(data);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
+app.get("/tasks", async (req, res) => {
+  try {
+    const data = await client
+      .db("simple-cleaning-app")
+      .collection("tasks")
+      .find()
+      .toArray();
+    res.send(data);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
+app.post("/saveTask", async (req, res) => {
+  try {
+    const { id } = req.body;
+    const data = await client
+      .db("simple-cleaning-app")
+      .collection("tasks")
+      .updateOne({ id }, { $set: req.body }, { upsert: true });
+    res.send(data);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
 });
 
 app.listen(port, () => {

@@ -31,7 +31,11 @@ app.get("/rooms", async (req, res) => {
       .collection("rooms")
       .find()
       .toArray();
-    res.send(data);
+    const highestId = data.reduce(
+      (max, room) => (room.id > max ? room.id : max),
+      -1
+    );
+    res.send({ rooms: data, nextId: highestId + 1 });
   } catch (err) {
     res.status(500).send({ message: err.message });
   }
@@ -44,7 +48,11 @@ app.get("/tasks", async (req, res) => {
       .collection("tasks")
       .find()
       .toArray();
-    res.send(data);
+    const highestId = data.reduce(
+      (max, task) => (task.id > max ? task.id : max),
+      -1
+    );
+    res.send({ tasks: data, nextId: highestId + 1 });
   } catch (err) {
     res.status(500).send({ message: err.message });
   }
@@ -56,6 +64,19 @@ app.post("/saveTask", async (req, res) => {
     const data = await client
       .db("simple-cleaning-app")
       .collection("tasks")
+      .updateOne({ id }, { $set: req.body }, { upsert: true });
+    res.send(data);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
+app.post("/saveRoom", async (req, res) => {
+  try {
+    const { id } = req.body;
+    const data = await client
+      .db("simple-cleaning-app")
+      .collection("rooms")
       .updateOne({ id }, { $set: req.body }, { upsert: true });
     res.send(data);
   } catch (err) {
